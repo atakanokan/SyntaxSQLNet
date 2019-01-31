@@ -681,7 +681,9 @@ def parse_data(data):
     for key in dataset:
         print("dataset:{} size:{}".format(key, len(dataset[key])))
         json.dump(dataset[key], 
-                    open("./generated_data/{}_{}_{}.json".format(history_option,train_dev, key), "w"), 
+                    open("./generated_data/{}_{}_{}.json".format(history_option,
+                                                                train_dev, 
+                                                                key), "w"), 
                     indent=2)
 
 

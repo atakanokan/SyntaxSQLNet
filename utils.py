@@ -5,6 +5,7 @@ import numpy as np
 import os
 import signal
 from preprocess_train_dev_data import get_table_dict
+from data.process_sql import tokenize
 
 
 def load_train_dev_dataset(component,train_dev,history, root):
@@ -20,6 +21,7 @@ def load_train_dev_dataset(component,train_dev,history, root):
 
 
 def to_batch_seq(data, idxes, st, ed):
+    # to_batch_seq(data, perm, st, ed)
     q_seq = []
     history = []
     label = []
@@ -575,14 +577,17 @@ def get_tables_html(db_name):
     return table_html, table_names_db
 
 
-## used for training in train.py
+from preprocess_train_dev_data import *
+
+## used for training based on user fedback in train_feedback.py
 def epoch_feedback_train(model, optimizer, batch_size, component, 
-                        embed_layer, data, table_type):
+                        embed_layer, data, table_type, nlq, db_name, 
+                        correct_query):
     """
-    Select a random batch 
+    Select a random batch (size = batch size + 1)
     Add the feedback query and language
     """   
-
+    optimizer.zero_grad()
     model.train()
     perm = np.random.permutation(len(data))
     cum_loss = 0.0
@@ -590,8 +595,9 @@ def epoch_feedback_train(model, optimizer, batch_size, component,
 
     # while st < len(data):
 
-    ed = st+batch_size if st+batch_size < len(perm) else len(perm)
+    # ed = st+batch_size if st+batch_size < len(perm) else len(perm)
     # print("ed = {}".format(ed))
+    ed = batch_size - 1
     q_seq, history,label = to_batch_seq(data, perm, st, ed)
     # q_seq, history, label are all lists
     print("q_seq, type = {}, {}".format(q_seq, type(q_seq)))
@@ -599,8 +605,17 @@ def epoch_feedback_train(model, optimizer, batch_size, component,
     print("label, type = {}, {}".format(label, type(label)))      # loss = model.loss(score, label)
 
     # add the correct query given by the user
+    # edit_nlq =
+    print("db_id: {}".format(db_name)) 
+    print("query: {}".format(correct_query)) 
+    print("query_toks: {}".format(tokenize(correct_query))) 
+    print("question: {}".format(nlq))
+    print("question_toks: {}".format(tokenize(nlq)))
     
 
+
+    if True:
+        return
 
     q_emb_var, q_len = embed_layer.gen_x_q_batch(q_seq)
 
