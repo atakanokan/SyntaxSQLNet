@@ -22,7 +22,7 @@ import os
 
 
 
-def infer_script(nlq,db_name,toy):
+def infer_script(nlq,db_name,toy,word_emb):
     """
     Arguments:
         nlq: english question (tokenization is done here)
@@ -82,11 +82,11 @@ def infer_script(nlq,db_name,toy):
 
 
     # LOAD WORD EMBEDDINGS
-    if not os.path.isfile('./glove/usedwordemb.pickle'):
-        print("Creating word embedding dictionary...")
-        word_emb = load_word_emb('glove/glove.%dB.%dd.txt'%(B_word,N_word), \
-                load_used=LOAD_USED_W2I, 
-                use_small=USE_SMALL)
+    # if not os.path.isfile('./glove/usedwordemb.pickle'):
+    # print("Creating word embedding dictionary...")
+    # word_emb = load_word_emb('glove/glove.%dB.%dd.txt'%(B_word,N_word), \
+    #         load_used=LOAD_USED_W2I, 
+    #         use_small=USE_SMALL)
         # print("word_emb: {}".format(word_emb))
         # print("tyep word_emb: {}".format(type(word_emb)))
     #     with open('./glove/usedwordemb.pickle', 'wb') as handle:
@@ -150,6 +150,18 @@ def infer_script(nlq,db_name,toy):
 
 
 if __name__ == '__main__':
-    infer_script(nlq = "What are the maximum and minimum budget of the departments?",
+    N_word=300
+    B_word=42
+    LOAD_USED_W2I = False
+    USE_SMALL=True
+
+    print("Creating word embedding dictionary...")
+    word_emb = load_word_emb('glove/glove.%dB.%dd.txt'%(B_word,N_word), \
+            load_used=LOAD_USED_W2I, 
+            use_small=USE_SMALL)
+
+
+    infer_script(nlq = "Names of departments created after 1800",
                 db_name = "department_management",
-                toy = True)
+                toy = True,
+                word_emb = word_emb)

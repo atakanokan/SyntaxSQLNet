@@ -21,10 +21,17 @@ from models.op_predictor import OpPredictor
 from models.root_teminal_predictor import RootTeminalPredictor
 from models.andor_predictor import AndOrPredictor
 
+from preprocess_train_dev_data import get_table_dict
+from data.process_sql import *
+from data.parse_sql_one import *
+from data.process_sql import tokenize
+from inference import infer_sql, infer_script
+
+
 TRAIN_COMPONENTS = ('multi_sql','keyword','col','op','agg','root_tem','des_asc','having','andor')
 SQL_TOK = ['<UNK>', '<END>', 'WHERE', 'AND', 'EQL', 'GT', 'LT', '<BEG>']
 
-def train_feedback(nlq,db_name,correct_query,toy):
+def train_feedback(nlq,db_name,correct_query,toy,word_emb):
     """
     Arguments:
         nlq: english question (tokenization is done here) - get from Flask (User)
@@ -33,7 +40,7 @@ def train_feedback(nlq,db_name,correct_query,toy):
         toy: uses a small example of word embeddings to debug faster
     """
 
-    EPOCH = 1
+    ITER = 10
 
     SAVED_MODELS_FOLDER = "saved_models"
     OUTPUT_PATH = "output_inference.txt"
@@ -70,16 +77,40 @@ def train_feedback(nlq,db_name,correct_query,toy):
     # TRAIN_ENTRY=(False, True, False)  # (AGG, SEL, COND)
     # TRAIN_AGG, TRAIN_SEL, TRAIN_COND = TRAIN_ENTRY
     learning_rate = 1e-4
-
-    # Loading Pretrained Word Embeddings
-    word_emb = load_word_emb(file_name = 'glove/glove.%dB.%dd.txt'%(B_word,N_word), \
-                                load_used=TRAIN_EMB, 
-                                use_small=USE_SMALL)
-    print("word_emb type = {}".format(type(word_emb)))
-    print("random element from word_emb = {}".format(word_emb[random.choice(list(word_emb.keys()))]))
-    print("finished load word embedding")
-    #word_emb = load_concat_wemb('glove/glove.42B.300d.txt', "/data/projects/paraphrase/generation/para-nmt-50m/data/paragram_sl999_czeng.txt")
     
+    # GENERATE CORRECT QUERY DATASET
+    table_data_path = "./data/spider/tables.json"
+    table_dict = get_table_dict(table_data_path)
+    train_data_path = "./data/spider/train_spider.json"
+    train_data = json.load(open(train_data_path))
+    sql = correct_query             #"SELECT name ,  country ,  age FROM singer ORDER BY age DESC"
+    db_id = db_name                 #"concert_singer"
+    table_file = table_data_path    # "tables.json"
+
+    schemas, db_names, tables = get_schemas_from_json(table_file)
+    schema = schemas[db_id]
+    table = tables[db_id]
+    schema = Schema(schema, table)
+    sql_label = get_sql(schema, sql)
+    correct_query_data = {
+        "multi_sql_dataset": [],
+        "keyword_dataset": [],
+        "col_dataset": [],
+        "op_dataset": [],
+        "agg_dataset": [],
+        "root_tem_dataset": [],
+        "des_asc_dataset": [],
+        "having_dataset": [],
+        "andor_dataset":[]
+    }
+    parser_item_with_long_history(tokenize(nlq), #item["question_toks"], 
+                              sql_label,  #item["sql"], 
+                              table_dict[db_name],  #table_dict[item["db_id"]], 
+                                [], 
+                                correct_query_data)
+    print("\nCorrect query dataset: {}".format(correct_query_data))
+
+
 
     for train_component in TRAIN_COMPONENTS:
         print("\nTRAIN COMPONENT: {}".format(train_component))
@@ -97,14 +128,17 @@ def train_feedback(nlq,db_name,correct_query,toy):
                                             HISTORY_TYPE, 
                                             DATA_ROOT)
         print("train_data type: {}".format(type(train_data)))
-        # dev_data = load_train_dev_dataset(args.train_component, "dev", 
-        #                                     args.history_type, 
-        #                                     args.data_root)
+        dev_data = load_train_dev_dataset(train_component, "dev", 
+                                            HISTORY_TYPE, 
+                                            DATA_ROOT)
         # sql_data, table_data, val_sql_data, val_table_data, \
         #         test_sql_data, test_table_data, \
         #         TRAIN_DB, DEV_DB, TEST_DB = load_dataset(args.dataset, use_small=USE_SMALL)
 
-
+        if GPU_ENABLE:
+            map_to = "gpu"
+        else:
+            map_to = "cpu"
         
         # Selecting which Model to Train
         model = None
@@ -114,30 +148,49 @@ def train_feedback(nlq,db_name,correct_query,toy):
                                     N_depth=N_depth,
                                     gpu=GPU, 
                                     use_hs=use_hs)
+            model.load_state_dict(torch.load("{}/multi_sql_models.dump".format(SAVED_MODELS_FOLDER),map_location=map_to))
+    
         elif train_component == "keyword":
             model = KeyWordPredictor(N_word=N_word,N_h=N_h,N_depth=N_depth,
                                     gpu=GPU, use_hs=use_hs)
+            model.load_state_dict(torch.load("{}/keyword_models.dump".format(SAVED_MODELS_FOLDER),map_location=map_to))
+    
         elif train_component == "col":
             model = ColPredictor(N_word=N_word,N_h=N_h,N_depth=N_depth,
                                 gpu=GPU, use_hs=use_hs)
+            model.load_state_dict(torch.load("{}/col_models.dump".format(SAVED_MODELS_FOLDER),map_location=map_to))
+    
         elif train_component == "op":
             model = OpPredictor(N_word=N_word,N_h=N_h,N_depth=N_depth,
                                 gpu=GPU, use_hs=use_hs)
+            model.load_state_dict(torch.load("{}/op_models.dump".format(SAVED_MODELS_FOLDER),map_location=map_to))
+                            
         elif train_component == "agg":
             model = AggPredictor(N_word=N_word,N_h=N_h,N_depth=N_depth,
                                 gpu=GPU, use_hs=use_hs)
+            model.load_state_dict(torch.load("{}/agg_models.dump".format(SAVED_MODELS_FOLDER),map_location=map_to))
+    
         elif train_component == "root_tem":
             model = RootTeminalPredictor(N_word=N_word,N_h=N_h,N_depth=N_depth,
                                             gpu=GPU, use_hs=use_hs)
+            model.load_state_dict(torch.load("{}/root_tem_models.dump".format(SAVED_MODELS_FOLDER),map_location=map_to))
+    
         elif train_component == "des_asc":
             model = DesAscLimitPredictor(N_word=N_word,N_h=N_h,N_depth=N_depth,
                                         gpu=GPU, use_hs=use_hs)
+            model.load_state_dict(torch.load("{}/des_asc_models.dump".format(SAVED_MODELS_FOLDER),map_location=map_to))
+    
         elif train_component == "having":
             model = HavingPredictor(N_word=N_word,N_h=N_h,N_depth=N_depth,
                                     gpu=GPU, use_hs=use_hs)
+            model.load_state_dict(torch.load("{}/having_models.dump".format(SAVED_MODELS_FOLDER),map_location=map_to))
+
         elif train_component == "andor":
             model = AndOrPredictor(N_word=N_word, N_h=N_h, N_depth=N_depth, 
                                     gpu=GPU, use_hs=use_hs)
+            model.load_state_dict(torch.load("{}/andor_models.dump".format(SAVED_MODELS_FOLDER),map_location=map_to))
+
+
         # model = SQLNet(word_emb, N_word=N_word, gpu=GPU, trainable_emb=args.train_emb)
         
         optimizer = torch.optim.Adam(model.parameters(), 
@@ -156,8 +209,8 @@ def train_feedback(nlq,db_name,correct_query,toy):
 
         print("start training")
         best_acc = 0.0
-        for i in range(EPOCH):
-            print('Epoch %d @ %s'%(i+1, datetime.datetime.now()))
+        for i in range(ITER):
+            print('ITER %d @ %s'%(i+1, datetime.datetime.now()))
             # arguments of epoch_train
             # model, optimizer, batch_size, component,embed_layer,data, table_type
             # print(' Loss = %s' % epoch_train(
@@ -166,16 +219,6 @@ def train_feedback(nlq,db_name,correct_query,toy):
             #                     embed_layer,
             #                     train_data,
             #                     table_type=args.table_type))
-            # acc = epoch_acc(model, 
-            #                 BATCH_SIZE, 
-            #                 args.train_component,
-            #                 embed_layer,dev_data,
-            #                 table_type=args.table_type)
-            # if acc > best_acc:
-            #     best_acc = acc
-            #     print("Save model...")
-            #     torch.save(model.state_dict(), 
-            #                 args.save_dir+"/{}_models.dump".format(args.train_component))
             print(' Loss = %s' % epoch_feedback_train(model = model, 
                                                     optimizer = optimizer, 
                                                     batch_size = BATCH_SIZE, 
@@ -183,18 +226,53 @@ def train_feedback(nlq,db_name,correct_query,toy):
                                                     embed_layer = embed_layer, 
                                                     data = train_data, 
                                                     table_type = TABLE_TYPE,
-                                                    nlq = nlq,
-                                                    db_name = db_name,
-                                                    correct_query = correct_query))
+                                                    nlq = nlq, 
+                                                    db_name = db_name, 
+                                                    correct_query = correct_query,
+                                                    correct_query_data = correct_query_data))
+            acc = epoch_acc(model, 
+                            BATCH_SIZE, 
+                            train_component,
+                            embed_layer,dev_data,
+                            table_type=TABLE_TYPE)
+            if acc > best_acc:
+                best_acc = acc
+                print("Save model...")
+                torch.save(model.state_dict(), 
+                            SAVED_MODELS_FOLDER+"/{}_models.dump".format(train_component))
 
 
 
 
 if __name__ == '__main__':
+    nlq = "What are the names of the departments that were founded after 1800?"
+    db_name = "department_management"
+    correct_query = "Select Name from department where Creation > 1800"
+
+    N_word=300
+    B_word=42
+    LOAD_USED_W2I = False
+    USE_SMALL=False
+
+    # Loading Pretrained Word Embeddings
+    word_emb = load_word_emb(file_name = 'glove/glove.%dB.%dd.txt'%(B_word,N_word), \
+                                load_used=LOAD_USED_W2I, 
+                                use_small=USE_SMALL)
+    print("word_emb type = {}".format(type(word_emb)))
+    print("random element from word_emb = {}".format(word_emb[random.choice(list(word_emb.keys()))]))
+    print("finished load word embedding")
+    #word_emb = load_concat_wemb('glove/glove.42B.300d.txt', "/data/projects/paraphrase/generation/para-nmt-50m/data/paragram_sl999_czeng.txt")
+
+
     # train the network with the correct query
-    train_feedback(nlq = "Which department has the minimum budget?",                                            # What is the minimum department budget? 
-                    db_name = "department_management",                                                          # department_management
-                    correct_query = "select Name from department order by Budget_in_Billions asc limit 1",      # SELECT 
-                    toy = True)
+    train_feedback(nlq = nlq,                                            # What is the minimum department budget? 
+                    db_name = db_name,                                                          # department_management
+                    correct_query = correct_query,      # SELECT 
+                    toy = False,
+                    word_emb = word_emb)
     
     # infer the same question to see whether the output changed
+    infer_script(nlq = nlq,
+                db_name = db_name,
+                toy = False,
+                word_emb = word_emb)

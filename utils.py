@@ -354,7 +354,7 @@ def epoch_acc(model, batch_size, component, embed_layer, data, table_type, error
         else:
             err = model.check_acc(score, label)
             total_error += err
-            print("err: {}, total_error: {}".format(err,total_error))
+            # print("err: {}, total_error: {}".format(err,total_error))
 
         st = ed
 
@@ -400,7 +400,7 @@ def test_acc(model, batch_size, data, output_path):
         # signal.signal(signal.SIGALRM, timeout_handler)
         # signal.alarm(2) # set timer to prevent infinite recursion in SQL generation
         
-        print("\nitem['question_toks']]*batch_size = " + str([item["question_toks"]]*batch_size))
+        # print("\nitem['question_toks']]*batch_size = " + str([item["question_toks"]]*batch_size))
         # print("\ntable_dict[db_id] = " + str(table_dict[db_id]))
         
         sql = model.forward([item["question_toks"]]*batch_size,
@@ -413,7 +413,7 @@ def test_acc(model, batch_size, data, output_path):
         else:
             sql = "select a from b"
 
-        print("Generated sql = " + str(sql))
+        # print("Generated sql = " + str(sql))
         # print("")
         f.write("{}\n".format(sql))
 
@@ -582,11 +582,13 @@ from preprocess_train_dev_data import *
 ## used for training based on user fedback in train_feedback.py
 def epoch_feedback_train(model, optimizer, batch_size, component, 
                         embed_layer, data, table_type, nlq, db_name, 
-                        correct_query):
+                        correct_query, correct_query_data):
     """
     Select a random batch (size = batch size + 1)
     Add the feedback query and language
     """   
+    
+
     optimizer.zero_grad()
     model.train()
     perm = np.random.permutation(len(data))
@@ -600,22 +602,39 @@ def epoch_feedback_train(model, optimizer, batch_size, component,
     ed = batch_size - 1
     q_seq, history,label = to_batch_seq(data, perm, st, ed)
     # q_seq, history, label are all lists
-    print("q_seq, type = {}, {}".format(q_seq, type(q_seq)))
-    print("history, type = {}, {}".format(history, type(history)))
-    print("label, type = {}, {}".format(label, type(label)))      # loss = model.loss(score, label)
+    # print("q_seq, type = {}, {}".format(q_seq, type(q_seq)))
+    # print("history, type = {}, {}".format(history, type(history)))
+    # print("label, type = {}, {}".format(label, type(label)))      # loss = model.loss(score, label)
 
     # add the correct query given by the user
-    # edit_nlq =
-    print("db_id: {}".format(db_name)) 
-    print("query: {}".format(correct_query)) 
-    print("query_toks: {}".format(tokenize(correct_query))) 
-    print("question: {}".format(nlq))
-    print("question_toks: {}".format(tokenize(nlq)))
+    # print("db_id: {}".format(db_name)) 
+    # print("query: {}".format(correct_query)) 
+    # print("query_toks: {}".format(tokenize(correct_query))) 
+    # print("question: {}".format(nlq))
+    # print("question_toks: {}".format(tokenize(nlq)))
+    # print("sql: {}".format())
     
+    # component = "col"
+    name_dataset = component + "_dataset"
+    # print("correct query dataset: {}".format(correct_query_data[name_dataset]))
+    
+    # if correct_query_data[name_dataset] != []:
+    #     print("correct query question_tokens: {}".format(correct_query_data[name_dataset][0]["question_tokens"]))
+    #     print("correct query history: {}".format(correct_query_data[name_dataset][0]["history"]))
+    #     print("correct query label: {}".format(correct_query_data[name_dataset][0]["label"]))
 
+    # exit if there is no component to train on
+    if correct_query_data[name_dataset] == []:
+        print("NOTHING TO TRAIN ON FOR COMPONENT: {}".format(component))
+        return 
 
-    if True:
-        return
+    # add to original dataset
+    q_seq.append(correct_query_data[name_dataset][0]["question_tokens"])
+    history.append(correct_query_data[name_dataset][0]["history"])
+    label.append(correct_query_data[name_dataset][0]["label"])
+
+    # if True:
+    #     return
 
     q_emb_var, q_len = embed_layer.gen_x_q_batch(q_seq)
 
@@ -623,6 +642,9 @@ def epoch_feedback_train(model, optimizer, batch_size, component,
 
     score = 0.0
     loss = 0.0
+
+    # fix ed after correct query addition
+    ed = batch_size
 
     if component == "multi_sql":
         # trained by Cross Entropy

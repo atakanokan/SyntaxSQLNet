@@ -174,13 +174,13 @@ class ColPredictor(nn.Module):
             cur_pred['col'] = np.argsort(-col_score[b])[:col_num]
             pred.append(cur_pred)
 
-        print("\ntruth: {}".format(truth))
-        print("pred: {}".format(pred))
+        # print("\ntruth: {}".format(truth))
+        # print("pred: {}".format(pred))
 
 
         for b, (p, t) in enumerate(zip(pred, truth)):
             col_num, col = p['col_num'], p['col']
-            print("p: {} || t: {}".format)
+            # print("p: {} || t: {}".format)
 
             flag = True
             if col_num != len(t): # double check truth format and for test cases

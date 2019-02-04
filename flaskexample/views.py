@@ -2,12 +2,21 @@ from flaskexample import app
 from flask import request
 from flask import render_template
 from inference import infer_script
-from utils import get_table_names, get_tables_html
+from utils import get_table_names, get_tables_html, load_word_emb
 
 # @app.route('/')
 # @app.route('/index')
 # def index():
 #    return "Hello, World!"
+
+N_word=300
+B_word=42
+LOAD_USED_W2I = False
+USE_SMALL=False
+print("Creating word embedding dictionary...")
+word_emb = load_word_emb('glove/glove.%dB.%dd.txt'%(B_word,N_word), \
+      load_used=LOAD_USED_W2I, 
+      use_small=USE_SMALL)
 
 @app.route('/')
 @app.route('/index')
@@ -35,7 +44,8 @@ def cesareans_output():
    # generate the sql query
    gen_sql = infer_script(nlq = eng_q,
                            db_name = db_name_q,
-                           toy = True)
+                           toy = True,
+                           word_emb = word_emb)
    print("Generated SQL: {}".format(gen_sql))
 
    # get tables from database
