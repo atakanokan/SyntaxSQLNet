@@ -7,6 +7,13 @@ from torch.autograd import Variable
 def run_lstm(lstm, inp, inp_len, hidden=None):
     # Run the LSTM using packed sequence.
     # This requires to first sort the input according to its length.
+
+    """
+    In the multisql predictor
+    q_enc, _ = run_lstm(self.q_lstm, q_emb_var, q_len)
+        self.q_lstm: nn.LSTM()
+        q_emb_var: 
+    """
     sort_perm = np.array(sorted(range(len(inp_len)),
                         key=lambda k:inp_len[k], 
                         reverse=True))

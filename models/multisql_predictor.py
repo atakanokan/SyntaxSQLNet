@@ -43,7 +43,8 @@ class MultiSqlPredictor(nn.Module):
         self.multi_out_q = nn.Linear(N_h, N_h)
         self.multi_out_hs = nn.Linear(N_h, N_h)
         self.multi_out_c = nn.Linear(N_h, N_h)
-        self.multi_out = nn.Sequential(nn.Tanh(), nn.Linear(N_h, 1))
+        self.multi_out = nn.Sequential(nn.Tanh(), 
+                                        nn.Linear(N_h, 1))
 
         # self.softmax = nn.Softmax() #dim=1
         self.softmax = nn.Softmax(dim = 1) #dim=1
@@ -103,7 +104,9 @@ class MultiSqlPredictor(nn.Module):
 
         # Compute prediction scores
         # self.multi_out.squeeze(): (B, 4, 1) -> (B, 4)
-        mulit_score = self.multi_out(self.multi_out_q(q_weighted) + int(self.use_hs)* self.multi_out_hs(hs_weighted) + self.multi_out_c(mkw_enc)).view(B,-1)
+        mulit_score = self.multi_out(self.multi_out_q(q_weighted) + \
+                        int(self.use_hs)* self.multi_out_hs(hs_weighted) + \
+                            self.multi_out_c(mkw_enc)).view(B,-1)
 
         return mulit_score
 

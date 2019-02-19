@@ -4,6 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
+import sys
+
 
 AGG_OPS = ('none', 'maximum', 'minimum', 'count', 'sum', 'average')
 class WordEmbedding(nn.Module):
@@ -27,9 +29,14 @@ class WordEmbedding(nn.Module):
             print ("Using fixed embedding")
 
     def gen_x_q_batch(self, q):
+        print("\n\ngen_x_q_batch STARTED")
         """
-        q = list of lists (tokenized queries)
-        B = batch size
+
+
+        q: list of tokenized queries - list of lists
+        B: batch size
+        val_embs:
+        val_len: 
         """
         # print("\nq = " + str(q))
         B = len(q)
@@ -48,23 +55,36 @@ class WordEmbedding(nn.Module):
             q_val = []
             for ws in one_q:
                 # for each word (ws = str) in the sentence
+                # get the word embedding and append it to q_val
                 # print("ws = " + str(ws))
                 q_val.append(self.word_emb.get(ws, 
                                               np.zeros(self.N_word, dtype=np.float32)))                
-            # print("g_val = " + str(q_val))
+            # print("q_val = " + str(q_val))
 
             #<BEG> and <END>
+            # add two all zero arrays to the beginning and end
+            # val_embs is the whole batch's sentences' word embeddings
             val_embs.append([np.zeros(self.N_word, dtype=np.float32)] + \
                                 q_val + \
                                 [np.zeros(self.N_word, dtype=np.float32)])  
+
+            
             val_len[i] = 1 + len(q_val) + 1
         max_len = max(val_len)
 
         # print("val_len = " + str(val_len))
         # print("len val_embs = " + str(len(val_embs[0])))
         # print("val_embs = " + str(val_embs[0]))
+        # print("max_len = " + str(max_len))
 
+        # # for debugging
+        # sys.exit("Error message")
+
+        # create an empty matrix with 
+        # size batch_size x max sentence length x word embedding size
         val_emb_array = np.zeros((B, max_len, self.N_word), dtype=np.float32)
+
+
         for i in range(B):
             for t in range(len(val_embs[i])):
                 # print("\ntype(val_embs[i][t]) = " + str(type(val_embs[i][t])))
@@ -72,16 +92,28 @@ class WordEmbedding(nn.Module):
 
                 # print("len(val_embs[i][t]) = " + str(len(val_embs[i][t])))
                 # print("list(val_embs[i][t]) = " + str(list(val_embs[i][t])))
+
+                # why are there two of these?
                 # val_emb_array[i, t, :] = list(val_embs[i][t])
                 val_emb_array[i, t, :] = val_embs[i][t]
         val_inp = torch.from_numpy(val_emb_array)
+        # print("val_inp = " + str(val_inp))
+
         if self.gpu:
             val_inp = val_inp.cuda()
+
+
         val_inp_var = Variable(val_inp)
+        # print("val_inp_var = " + str(val_inp_var))
+
+        # for debugging
+        # sys.exit("Error message")
+
 
         return val_inp_var, val_len
 
     def gen_x_history_batch(self, history):
+        print("gen_x_history_batch")
         B = len(history)
         val_embs = []
         val_len = np.zeros(B, dtype=np.int64)
@@ -139,7 +171,12 @@ class WordEmbedding(nn.Module):
         val_inp = torch.from_numpy(val_emb_array)
         if self.gpu:
             val_inp = val_inp.cuda()
+
         val_inp_var = Variable(val_inp)
+        print("val_inp_var = " + str(val_inp_var))
+
+        # for debugging
+        # sys.exit("Error message")
 
         return val_inp_var, val_len
 

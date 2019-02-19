@@ -114,6 +114,10 @@
           <label for="correct_query">Please enter the correct query:</label><br>
           <input type="text" id="correct_query" name='correct_query' size="70" placeholder="Enter Correct Query Here">
         </div>
+
+        <div>
+          <button type="submit" class="btn btn-default btn-lg">Train the model!</button>
+        </div>
   
         <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
         <script src="../static/js/bootstrap.min.js"></script>
@@ -131,6 +135,9 @@
             {{ table|safe }}
           {% endfor %}
         </div>
+
+        <br>
+        <br>
   
         <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
         <script src="../static/js/bootstrap.min.js"></script>

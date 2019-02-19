@@ -61,25 +61,19 @@ def to_batch_tables(data, idxes, st,ed, table_type):
     return col_seq
 
 ## used for training in train.py
-def epoch_train(model, optimizer, batch_size, component, embed_layer, data, table_type):
+def epoch_train(model, optimizer, batch_size, component, 
+                embed_layer, data, table_type):
     """
-    epoch_train(model,  -> one of MultiSqlPredictor, KeyWordPredictor, ColPredictor
-                            OpPredictor, AggPredictor, RootTeminalPredictor, 
-                            DesAscLimitPredictor, HavingPredictor, AndOrPredictor
-                optimizer, -> torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay = 0)
-                BATCH_SIZE, -> 20 if toy, 64 if normal
-                args.train_component, -> one of train components,available:[multi_sql,keyword,col,op,agg,root_tem,des_asc,having,andor]'
-                embed_layer, -> WordEmbedding(word_emb, 
-                                N_word, 
-                                gpu=GPU,
-                                SQL_TOK=SQL_TOK, 
-                                trainable=args.train_emb)
-                train_data, -> load_train_dev_dataset(args.train_component, "train", 
-                                        args.history_type, 
-                                        args.data_root)
-                table_type=args.table_type -> choices=['std','no']
-                                            standard, hierarchical, or no table info
-                                            used only in: col,op,agg,root_tem,des_asc,having modules
+    Arguments:
+        model,  -> one of MultiSqlPredictor, KeyWordPredictor, ColPredictor
+                    OpPredictor, AggPredictor, RootTeminalPredictor, 
+                    DesAscLimitPredictor, HavingPredictor, AndOrPredictor
+        optimizer, -> torch.optim.Adam()
+        BATCH_SIZE, -> 20 if toy, 64 if normal
+        component, -> one of train components, [multi_sql,keyword,col,op,agg,root_tem,des_asc,having,andor]'
+        embed_layer, -> word embeddings dictionary
+        train_data, -> json data
+        table_type -> choices=['std','no'] - standard, hierarchical, or no table info
     """
 
     model.train()
@@ -93,17 +87,24 @@ def epoch_train(model, optimizer, batch_size, component, embed_layer, data, tabl
         q_seq, history,label = to_batch_seq(data, perm, st, ed)
 
         # print("q_seq = {}".format(q_seq))
+        # q_emb_var: question embeddings in batch x max sentence length x embedding size 
         q_emb_var, q_len = embed_layer.gen_x_q_batch(q_seq)
 
+
+        # hs_emb_var: 
         hs_emb_var, hs_len = embed_layer.gen_x_history_batch(history)
+
+
         score = 0.0
         loss = 0.0
 
         if component == "multi_sql":
             # trained by Cross Entropy
-            mkw_emb_var = embed_layer.gen_word_list_embedding(["none","except","intersect","union"],(ed-st))
+            mkw_emb_var = embed_layer.gen_word_list_embedding(["none","except","intersect","union"],
+                                                                (ed-st))
             mkw_len = np.full(q_len.shape, 4,dtype=np.int64)
             # print("mkw_emb:{}".format(mkw_emb_var.size()))
+
             score = model.forward(q_emb_var, 
                                 q_len,
                                 hs_emb_var, 
@@ -235,7 +236,9 @@ def epoch_train(model, optimizer, batch_size, component, embed_layer, data, tabl
 
 ## used for development evaluation in train.py
 def epoch_acc(model, batch_size, component, embed_layer, data, table_type, error_print=False, train_flag = False):
-    
+    """
+    Calculates the batch accuracy
+    """
     model.eval()
     perm = list(range(len(data)))
     st = 0
@@ -377,8 +380,7 @@ def test_acc(model, batch_size, data, output_path):
 
     """
     works with: python test.py --test_data_path data/spider/dev.json
-    doesn't work with the full_dev_multi_sql_dataset.json like data
-    No evaluation criteria
+    No evaluation criteria / to be summitted to the Spider website
     """
     table_dict = get_table_dict("./data/spider/tables.json")
     # print("\ntable_dict keys = " + str(table_dict.keys()))
@@ -425,8 +427,10 @@ def infer_sql(model, batch_size, nlq, table_dict, output_path):
 
     """
     works with: python test.py --test_data_path data/spider/dev.json
-    doesn't work with the full_dev_multi_sql_dataset.json like data
+    The user should give the natural language question
+    Assumes that the database information is already input to the database info file
 
+    TO BE DELETED
     item = {'db_id': 'department_management', 
             'query': 'SELECT max(budget_in_billions) ,  min(budget_in_billions) FROM department', 
             'query_toks': ['SELECT', 'max', '(', 'budget_in_billions', ')', ',', 'min', '(', 'budget_in_billions', ')', 'FROM', 'department'], 
@@ -442,7 +446,6 @@ def infer_sql(model, batch_size, nlq, table_dict, output_path):
                     'select': [False, [[1, [0, [0, 5, False], None]], [2, [0, [0, 5, False], None]]]], 
                     'union': None, 'where': []}}
 
-    The user should give the natural language question + info about:
     table_dict[db_id] = 
             {'column_names': [[-1, '*'], [0, 'department id'], [0, 'name'], [0, 'creation'], [0, 'ranking'], [0, 'budget in billions'], [0, 'num employees'], [1, 'head id'], [1, 'name'], [1, 'born state'], [1, 'age'], [2, 'department id'], [2, 'head id'], [2, 'temporary acting']], 
             'column_names_original': [[-1, '*'], [0, 'Department_ID'], [0, 'Name'], [0, 'Creation'], [0, 'Ranking'], [0, 'Budget_in_Billions'], [0, 'Num_Employees'], [1, 'head_ID'], [1, 'name'], [1, 'born_state'], [1, 'age'], [2, 'department_ID'], [2, 'head_ID'], [2, 'temporary_acting']], 
@@ -469,16 +472,6 @@ def infer_sql(model, batch_size, nlq, table_dict, output_path):
     item = nlq
     db_id = item["db_id"]
 
-
-    # table_dict = get_table_dict("./data/spider/tables.json")
-    # print("\ntable_dict keys = " + str(table_dict.keys()))
-    # print("\ntable_dict[perpetrator] = " + str(table_dict["perpetrator"]))
-    # print("\ntable_dict[perpetrator] keys = " + str(table_dict["perpetrator"].keys()))
-    # print("\ntable_dict[perpetrator][db_id] = " + str(table_dict["perpetrator"]["db_id"]))
-    # print("\noutput path = " + str(output_path))
-    # print("\ntype(data) = " + str(type(data)))
-    # print("data[1] = " + str(data[1]))
-
     f = open(output_path,"w")
 
     # for item in data[:]:
@@ -495,11 +488,15 @@ def infer_sql(model, batch_size, nlq, table_dict, output_path):
     # print("item['question_toks']] = " + str([item["question_toks"]]))
     # print("table_dict[db_id] = " + str(table_dict[db_id]))
     
+    # set the model to evaluation mode
+    model.eval()
+
     # sql = model.forward([item["question_toks"]]*batch_size,
     sql = model.forward([item["question_toks"]],
                         [],
                         table_dict[db_id])
     
+    # Set to SQL parsing
     if sql is not None:
         print(sql)
         sql = model.gen_sql(sql,

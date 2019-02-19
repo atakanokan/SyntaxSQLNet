@@ -12,7 +12,7 @@ from utils import get_table_names, get_tables_html, load_word_emb
 N_word=300
 B_word=42
 LOAD_USED_W2I = False
-USE_SMALL=False
+USE_SMALL=True
 print("Creating word embedding dictionary...")
 word_emb = load_word_emb('glove/glove.%dB.%dd.txt'%(B_word,N_word), \
       load_used=LOAD_USED_W2I, 
