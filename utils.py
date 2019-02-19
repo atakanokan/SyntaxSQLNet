@@ -766,7 +766,7 @@ def epoch_feedback_train(model, optimizer, batch_size, component,
     #         gt_where=gt_where_seq, gt_cond=gt_cond_seq, gt_sel=gt_sel_seq)
     # print("label {}".format(label))
     loss = model.loss(score, label)
-    print("loss {}".format(loss.data.cpu().numpy()))
+    print("Component Loss {}".format(loss.data.cpu().numpy()))
     # cum_loss += loss.data.cpu().numpy()[0]*(ed - st)
     cum_loss += loss.data.cpu().numpy()*(ed - st)
     optimizer.zero_grad()

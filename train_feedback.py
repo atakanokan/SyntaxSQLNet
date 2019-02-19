@@ -40,7 +40,7 @@ def train_feedback(nlq,db_name,correct_query,toy,word_emb):
         toy: uses a small example of word embeddings to debug faster
     """
 
-    ITER = 10
+    ITER = 21
 
     SAVED_MODELS_FOLDER = "saved_models"
     OUTPUT_PATH = "output_inference.txt"
@@ -108,7 +108,7 @@ def train_feedback(nlq,db_name,correct_query,toy,word_emb):
                               table_dict[db_name],  #table_dict[item["db_id"]], 
                                 [], 
                                 correct_query_data)
-    print("\nCorrect query dataset: {}".format(correct_query_data))
+    # print("\nCorrect query dataset: {}".format(correct_query_data))
 
 
 
@@ -127,7 +127,7 @@ def train_feedback(nlq,db_name,correct_query,toy,word_emb):
                                             "train", 
                                             HISTORY_TYPE, 
                                             DATA_ROOT)
-        print("train_data type: {}".format(type(train_data)))
+        # print("train_data type: {}".format(type(train_data)))
         dev_data = load_train_dev_dataset(train_component, "dev", 
                                             HISTORY_TYPE, 
                                             DATA_ROOT)
@@ -219,7 +219,7 @@ def train_feedback(nlq,db_name,correct_query,toy,word_emb):
             #                     embed_layer,
             #                     train_data,
             #                     table_type=args.table_type))
-            print(' Loss = %s' % epoch_feedback_train(model = model, 
+            print('Total Loss = %s' % epoch_feedback_train(model = model, 
                                                     optimizer = optimizer, 
                                                     batch_size = BATCH_SIZE, 
                                                     component = train_component, 
@@ -230,16 +230,19 @@ def train_feedback(nlq,db_name,correct_query,toy,word_emb):
                                                     db_name = db_name, 
                                                     correct_query = correct_query,
                                                     correct_query_data = correct_query_data))
-            acc = epoch_acc(model, 
-                            BATCH_SIZE, 
-                            train_component,
-                            embed_layer,dev_data,
-                            table_type=TABLE_TYPE)
-            if acc > best_acc:
-                best_acc = acc
-                print("Save model...")
-                torch.save(model.state_dict(), 
-                            SAVED_MODELS_FOLDER+"/{}_models.dump".format(train_component))
+            
+            # Check improvement every 10 iterations
+            if i % 10 == 0:
+                acc = epoch_acc(model, 
+                                BATCH_SIZE, 
+                                train_component,
+                                embed_layer,dev_data,
+                                table_type=TABLE_TYPE)
+                if acc > best_acc:
+                    best_acc = acc
+                    print("Save model...")
+                    torch.save(model.state_dict(), 
+                                SAVED_MODELS_FOLDER+"/{}_models.dump".format(train_component))
 
 
 

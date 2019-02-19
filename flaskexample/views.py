@@ -6,6 +6,7 @@ from flaskexample import app
 from flask import request
 from flask import render_template
 from inference import infer_script
+from train_feedback import train_feedback
 from utils import get_table_names, get_tables_html, load_word_emb
 
 # @app.route('/')
@@ -84,6 +85,13 @@ def retrain_flask():
    # get tables from database
    tables_html, titles = get_tables_html(db_name = db_name_q)
    print("Number of Tables in DB: {}".format(len(tables_html)))
+
+   # retrain the model with the correct sql query
+   train_feedback(nlq = eng_q,
+                  db_name = db_name_q,
+                  correct_query = correct_query,
+                  toy = True,
+                  word_emb = word_emb)
 
    return render_template("retrain.html", 
                          question = eng_q,

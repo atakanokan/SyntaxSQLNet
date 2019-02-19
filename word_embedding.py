@@ -29,7 +29,7 @@ class WordEmbedding(nn.Module):
             print ("Using fixed embedding")
 
     def gen_x_q_batch(self, q):
-        print("\n\ngen_x_q_batch STARTED")
+        # print("\n\ngen_x_q_batch STARTED")
         """
 
 
@@ -113,7 +113,7 @@ class WordEmbedding(nn.Module):
         return val_inp_var, val_len
 
     def gen_x_history_batch(self, history):
-        print("gen_x_history_batch")
+        # print("gen_x_history_batch")
         B = len(history)
         val_embs = []
         val_len = np.zeros(B, dtype=np.int64)
@@ -173,7 +173,7 @@ class WordEmbedding(nn.Module):
             val_inp = val_inp.cuda()
 
         val_inp_var = Variable(val_inp)
-        print("val_inp_var = " + str(val_inp_var))
+        # print("val_inp_var = " + str(val_inp_var))
 
         # for debugging
         # sys.exit("Error message")
