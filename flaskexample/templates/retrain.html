@@ -63,8 +63,8 @@
           <h2>Text to SQL</h2>
           <p>Uses SyntaxSQLNet Implementation</p>
       </div>
-      <hr>
-      <div class = "container">
+  
+      <!-- <div class = "container">
   
         <form  action="/output" method="GET">
           <div class="form-group">
@@ -82,18 +82,19 @@
   
         </form>
       </div>
-  
+   -->
       <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
       <script src="../static/js/bootstrap.min.js"></script>
   
     </div> <!-- /.container-->
   
+
+    
       <div class="container">
         <div class="starter-template">
           <h3>Generated Query:</h3>
           <p >Question: <br> {{question}}</p>
           <p >DB Name: <br> {{database_name}}</p>
-          <p >Copy paste this query into your SQL query UI: <br> <strong>{{generated_sql}} </strong></p>
         </div>
   
   
@@ -105,7 +106,7 @@
 
 
       </div> <!-- /.container-->
-      <hr>
+  
       <div class="container">
 
           <div class = "container">
@@ -115,14 +116,6 @@
           <h3>Query Feedback:</h3>
         </div>
         <div class="form-group">
-            <div>
-                <label for="english_question">Please enter your question:</label><br>
-                <input type="text" id="english_question" name='english_question' size="70" placeholder="-">
-              </div>
-              <div class="form-group">
-                <label for="database_name">Please enter the database to be queried:</label><br>
-                <input type="text" id="database_name" name='database_name' size="70" placeholder="-">
-              </div>
           <label for="correct_query">Please enter the correct query:</label><br>
           <input type="text" id="correct_query" name='correct_query' size="70" placeholder="Enter Correct Query Here">
         </div>
