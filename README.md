@@ -18,6 +18,10 @@ Source code of our EMNLP 2018 paper: [SyntaxSQLNet: Syntax Tree Networks for Com
 }
 ```
 
+#### Presentation on the Business Use Case
+Please look at Atakan_Okan_Text2SQL.pdf in main directory.
+
+
 #### Environment Setup
 
 1. The code uses Python 3.7 and [Pytorch 1.0.0](https://pytorch.org/previous-versions/) GPU.
@@ -75,6 +79,26 @@ python test.py \
     --history_type    full|no \
     --table_type      std|no \
 ```
+
+#### Flask Testing (Local)
+Run model with question = `` What are the maximum and minimum budget of the departments?`` and database name = `` department_management ``
+
+#### Docker image creation and push to Docker Hub
+* ` docker build -t model-app `
+* ` docker login` -> enter your credentials
+* ` docker images ` -> get the image id of the model's container
+* ` docker tag <your image id> <your docker hub id>/<app name> `
+* ` docker push <your docker hub name>/<app-name> `
+
+#### Kubernetes Deployment
+After pushing the Docker image to Docker Hub & creating the Kubernetes cluster; run the following in Cloud Shell:
+* ` kubectl run model-app --image=atakanokan/model-app --port 5000 `
+* Verify by ` kubectl get pods `
+* `kubectl expose deployment model-app --type=LoadBalancer --port 80 --target-port 5000`
+* `kubectl get service` and get the cluster-ip
+
+And run the following from local terminal:
+* ` curl -X GET 'http://<your service IP>/output?english_question=What+are+the+maximum+and+minimum+budget+of+the+departments%3F&database_name=department_management' `
 
 #### Evaluation
 Follow the general evaluation process in [the Spider github page](https://github.com/taoyds/spider).
